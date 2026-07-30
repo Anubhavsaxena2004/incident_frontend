@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://52.63.212.154';
+let BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://52.63.212.154';
+
+// If running on HTTPS (e.g. Vercel) but BASE_URL is insecure HTTP, use relative path to route via vercel.json proxy
+if (typeof window !== 'undefined' && window.location.protocol === 'https:' && BASE_URL.startsWith('http://')) {
+  BASE_URL = '';
+}
 
 const api = axios.create({
   baseURL: BASE_URL,
