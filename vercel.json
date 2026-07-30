@@ -5,7 +5,7 @@
       "destination": "http://52.63.212.154/api/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
