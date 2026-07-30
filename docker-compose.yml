@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  incident-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: incident_frontend_microservice
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_BASE_URL=http://52.63.212.154
+    restart: always
