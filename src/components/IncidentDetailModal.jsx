@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import StatusBadge from './StatusBadge';
-import { X, Clock, MapPin, Shield, User, History, Activity, Edit, AlertCircle, CheckCircle, ArrowRight, Lock } from 'lucide-react';
+import { X, Clock, MapPin, Shield, User, History, Activity, Edit, AlertCircle, CheckCircle, ArrowRight, Lock, UserCheck } from 'lucide-react';
 import { updateIncident, getIncidentTimeline, getIncidentAssignments } from '../api/client';
 
 export default function IncidentDetailModal({ isOpen, onClose, incident, onUpdateSuccess, currentUser }) {
@@ -16,18 +16,22 @@ export default function IncidentDetailModal({ isOpen, onClose, incident, onUpdat
     status: incident?.status || 'REPORTED',
     priority: incident?.priority || 'MEDIUM',
     remarks: '',
-    assigned_to: typeof incident?.assigned_to === 'object' ? incident?.assigned_to?.id : (incident?.assigned_to || ''),
+    assigned_to: typeof incident?.assigned_to === 'object' ? String(incident?.assigned_to?.id || '') : (incident?.assigned_to ? String(incident?.assigned_to) : ''),
   });
+  const [customOfficerId, setCustomOfficerId] = useState('');
+  const [useCustomId, setUseCustomId] = useState(false);
+
   const [updateLoading, setUpdateLoading] = useState(false);
   const [updateError, setUpdateError] = useState(null);
 
   useEffect(() => {
     if (incident) {
+      const existingId = typeof incident.assigned_to === 'object' ? String(incident.assigned_to?.id || '') : (incident.assigned_to ? String(incident.assigned_to) : '');
       setUpdateData({
         status: incident.status || 'REPORTED',
         priority: incident.priority || 'MEDIUM',
         remarks: '',
-        assigned_to: typeof incident.assigned_to === 'object' ? incident.assigned_to?.id : (incident.assigned_to || ''),
+        assigned_to: existingId,
       });
       fetchAuditData();
     }
@@ -74,15 +78,17 @@ export default function IncidentDetailModal({ isOpen, onClose, incident, onUpdat
       if (updateData.priority && updateData.priority !== incident.priority) payload.priority = updateData.priority;
       if (updateData.remarks.trim()) payload.remarks = updateData.remarks.trim();
       
-      if (updateData.assigned_to !== '' && updateData.assigned_to !== null) {
-        const numId = parseInt(updateData.assigned_to, 10);
+      const targetOfficerId = useCustomId ? customOfficerId : updateData.assigned_to;
+
+      if (targetOfficerId !== '' && targetOfficerId !== null) {
+        const numId = parseInt(targetOfficerId, 10);
         if (!isNaN(numId) && numId > 0) {
           payload.assigned_to = numId;
         }
       }
 
       if (Object.keys(payload).length === 0) {
-        setUpdateError('No status, priority, remarks, or assignment changes were modified.');
+        setUpdateError('No status, priority, remarks, or officer assignment changes were modified.');
         setUpdateLoading(false);
         return;
       }
@@ -258,7 +264,7 @@ export default function IncidentDetailModal({ isOpen, onClose, incident, onUpdat
                     <strong style={{ display: 'block', fontSize: '0.95rem', marginBottom: '0.25rem' }}>
                       Operator & Admin Dispatch Controls Only
                     </strong>
-                    You are currently logged in as a <strong>{currentUser?.role || 'CITIZEN'}</strong>. Workflow state transitions, priority escalations, and operator assignments are restricted to authorized Operator and Admin accounts. Citizens can view the live Incident Overview and Audit Timelines.
+                    You are currently logged in as a <strong>{currentUser?.role || 'CITIZEN'}</strong>. Workflow state transitions, priority escalations, and officer assignments are restricted to authorized Operator and Admin accounts.
                   </div>
                 </div>
               ) : (
@@ -303,15 +309,46 @@ export default function IncidentDetailModal({ isOpen, onClose, incident, onUpdat
                     </div>
                   </div>
 
+                  {/* Assign Officer / Operator Dropdown */}
                   <div className="form-group">
-                    <label className="form-label">Assign Operator ID (Optional)</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      placeholder="Enter User ID of Operator (e.g. 2)"
-                      value={updateData.assigned_to}
-                      onChange={(e) => setUpdateData({ ...updateData, assigned_to: e.target.value })}
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                      <label className="form-label" style={{ margin: 0 }}>Assign Officer / Responder</label>
+                      <button
+                        type="button"
+                        style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}
+                        onClick={() => setUseCustomId(!useCustomId)}
+                      >
+                        {useCustomId ? 'Use Officer Dropdown' : 'Enter Custom Officer ID'}
+                      </button>
+                    </div>
+
+                    {!useCustomId ? (
+                      <select
+                        className="form-control"
+                        value={updateData.assigned_to}
+                        onChange={(e) => setUpdateData({ ...updateData, assigned_to: e.target.value })}
+                      >
+                        <option value="">-- Unassigned (Awaiting Dispatcher) --</option>
+                        {currentUser?.role === 'OPERATOR' && (
+                          <option value={String(currentUser.id)}>
+                            Self-Assign: Officer #{currentUser.id} ({currentUser.username} - OPERATOR)
+                          </option>
+                        )}
+                        <option value="1">Officer #1 - Mihir (Command Dispatcher)</option>
+                        <option value="2">Officer #2 - Tactical Operator Lead</option>
+                        <option value="3">Officer #3 - HAZMAT Response Specialist</option>
+                        <option value="4">Officer #4 - Emergency Patrol Commander</option>
+                        <option value="5">Officer #5 - Mobile Rescue Lead</option>
+                      </select>
+                    ) : (
+                      <input
+                        type="number"
+                        className="form-control"
+                        placeholder="Enter Numeric User ID of Officer (e.g. 2)"
+                        value={customOfficerId}
+                        onChange={(e) => setCustomOfficerId(e.target.value)}
+                      />
+                    )}
                   </div>
 
                   <div className="form-group">
