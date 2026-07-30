@@ -273,6 +273,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
                 >
                   <option value="CITIZEN">Citizen (Reporter)</option>
                   <option value="OPERATOR">Operator (First Responder / Dispatcher)</option>
+                  <option value="ADMIN">Admin (System Administrator)</option>
                 </select>
               </div>
 
