@@ -1,8 +1,10 @@
 import React from 'react';
 import StatusBadge from './StatusBadge';
-import { MapPin, Clock, User, Eye, Trash2, ShieldAlert, Flame, Car, Cross, AlertTriangle, HelpCircle, ArrowRight } from 'lucide-react';
+import { MapPin, Clock, User, Eye, Trash2, ShieldAlert, Flame, Car, Cross, AlertTriangle, HelpCircle } from 'lucide-react';
 
 export default function IncidentCard({ incident, onViewDetails, onDelete, currentUser, viewMode = 'grid' }) {
+  const incidentId = incident.incident_id || incident.id;
+
   // Category Icons & thematic color accents
   const getCategoryTheme = (category) => {
     switch (String(category).toUpperCase()) {
@@ -35,7 +37,17 @@ export default function IncidentCard({ incident, onViewDetails, onDelete, curren
     });
   };
 
-  const canDelete = currentUser && (currentUser.role === 'ADMIN' || incident.reported_by === currentUser.id || incident.reported_by_username === currentUser.username);
+  // Extract reported by username/id from object or string
+  const reportedById = typeof incident.reported_by === 'object' ? incident.reported_by?.id : incident.reported_by;
+  const reportedByUsername = typeof incident.reported_by === 'object' ? incident.reported_by?.username : incident.reported_by_username;
+
+  const canDelete = currentUser && (
+    currentUser.role === 'ADMIN' ||
+    reportedById === currentUser.id ||
+    reportedByUsername === currentUser.username
+  );
+
+  const assignedName = incident.assigned_to_name || (typeof incident.assigned_to === 'object' ? incident.assigned_to?.username : null);
 
   if (viewMode === 'list') {
     return (
@@ -62,7 +74,7 @@ export default function IncidentCard({ incident, onViewDetails, onDelete, curren
             <Eye size={14} /> Details
           </button>
           {canDelete && (
-            <button className="btn btn-danger btn-sm" onClick={() => onDelete(incident.id)} title="Delete Record">
+            <button className="btn btn-danger btn-sm" onClick={() => onDelete(incidentId)} title="Delete Record">
               <Trash2 size={14} />
             </button>
           )}
@@ -138,10 +150,10 @@ export default function IncidentCard({ incident, onViewDetails, onDelete, curren
               <span>{formatDate(incident.created_at)}</span>
             </div>
 
-            {incident.assigned_to_name ? (
+            {assignedName ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#c084fc', fontWeight: 600 }}>
                 <User size={12} />
-                <span>Operator: {incident.assigned_to_name}</span>
+                <span>Operator: {assignedName}</span>
               </div>
             ) : (
               <span style={{ fontSize: '0.7rem', color: '#64748b', fontStyle: 'italic' }}>Unassigned</span>
@@ -164,7 +176,7 @@ export default function IncidentCard({ incident, onViewDetails, onDelete, curren
           {canDelete && (
             <button
               className="btn btn-danger btn-sm"
-              onClick={() => onDelete(incident.id)}
+              onClick={() => onDelete(incidentId)}
               title="Delete Incident Record"
             >
               <Trash2 size={14} />
