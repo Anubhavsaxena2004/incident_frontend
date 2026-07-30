@@ -10,13 +10,14 @@ import CreateIncidentModal from './components/CreateIncidentModal';
 import IncidentDetailModal from './components/IncidentDetailModal';
 import NotificationToast from './components/NotificationToast';
 import { getIncidents, getCurrentUser, deleteIncident, logoutUser } from './api/client';
-import { ShieldAlert, AlertCircle, PlusCircle, RefreshCw, LayoutGrid, List } from 'lucide-react';
+import { ShieldAlert, AlertCircle, PlusCircle, RefreshCw, LayoutGrid, List, LogIn } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [is401Error, setIs401Error] = useState(false);
 
   // Layout View Mode: 'grid' | 'list'
   const [viewMode, setViewMode] = useState('grid');
@@ -102,13 +103,19 @@ export default function App() {
   const fetchIncidents = async () => {
     setLoading(true);
     setError(null);
+    setIs401Error(false);
     try {
       const data = await getIncidents(filters);
       const list = Array.isArray(data) ? data : (data.results || []);
       setIncidents(list);
     } catch (err) {
       console.error('Failed to load incidents:', err);
-      setError('Could not connect to incident backend service (http://52.63.212.154). Please check connection or authentication state.');
+      if (err.response?.status === 401) {
+        setIs401Error(true);
+        setError('Authentication required. Please sign in to view and manage live emergency incident telemetry.');
+      } else {
+        setError('Could not connect to incident backend service. Please check network connection or CORS config.');
+      }
     } finally {
       setLoading(false);
     }
@@ -117,7 +124,9 @@ export default function App() {
   const handleLogout = async () => {
     await logoutUser();
     setCurrentUser(null);
+    setIncidents([]);
     showNotification('success', 'Logged out successfully');
+    fetchIncidents();
   };
 
   const handleDeleteIncident = async (id) => {
@@ -173,27 +182,37 @@ export default function App() {
           searchInputRef={searchInputRef}
         />
 
-        {/* Error Alert Banner */}
+        {/* Error / Auth Required Alert Banner */}
         {error && (
           <div style={{
-            background: 'rgba(239, 68, 68, 0.14)',
-            border: '1px solid rgba(239, 68, 68, 0.35)',
+            background: is401Error ? 'rgba(59, 130, 246, 0.14)' : 'rgba(239, 68, 68, 0.14)',
+            border: `1px solid ${is401Error ? 'rgba(59, 130, 246, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
             borderRadius: '12px',
             padding: '1rem 1.25rem',
-            color: '#f87171',
+            color: is401Error ? '#60a5fa' : '#f87171',
             marginBottom: '1.5rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '1rem'
+            gap: '1rem',
+            flexWrap: 'wrap'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <AlertCircle size={20} style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: '0.875rem' }}>{error}</span>
+              <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{error}</span>
             </div>
-            <button className="btn btn-outline btn-sm" onClick={fetchIncidents} style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }}>
-              <RefreshCw size={14} /> Retry Connection
-            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {is401Error ? (
+                <button className="btn btn-primary btn-sm" onClick={() => setIsAuthOpen(true)}>
+                  <LogIn size={14} /> Sign In to System
+                </button>
+              ) : (
+                <button className="btn btn-outline btn-sm" onClick={fetchIncidents} style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }}>
+                  <RefreshCw size={14} /> Retry Connection
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -256,18 +275,29 @@ export default function App() {
               <ShieldAlert size={42} color="#64748b" />
             </div>
             <h3 style={{ fontSize: '1.25rem', color: '#f8fafc', marginBottom: '0.5rem', fontWeight: 700 }}>
-              No Incidents Matched Filter Parameters
+              {is401Error ? 'Authentication Required' : 'No Incidents Matched'}
             </h3>
             <p style={{ color: '#94a3b8', maxWidth: '460px', margin: '0 auto 1.5rem', fontSize: '0.9rem', lineHeight: 1.5 }}>
-              There are currently no active emergency incident reports matching your active search query or filter parameters.
+              {is401Error
+                ? 'Incident telemetry is protected. Please log in or register an account to view and manage live incidents.'
+                : 'There are currently no active emergency incident reports matching your active search query or filter parameters.'
+              }
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
-              <button className="btn btn-outline" onClick={() => setFilters({ category: '', status: '', priority: '', search: '' })}>
-                Reset All Filters
-              </button>
-              <button className="btn btn-primary" onClick={() => setIsCreateOpen(true)}>
-                <PlusCircle size={16} /> Submit Incident Report
-              </button>
+              {is401Error ? (
+                <button className="btn btn-primary" onClick={() => setIsAuthOpen(true)}>
+                  <LogIn size={16} /> Sign In / Register
+                </button>
+              ) : (
+                <>
+                  <button className="btn btn-outline" onClick={() => setFilters({ category: '', status: '', priority: '', search: '' })}>
+                    Reset All Filters
+                  </button>
+                  <button className="btn btn-primary" onClick={() => setIsCreateOpen(true)}>
+                    <PlusCircle size={16} /> Submit Incident Report
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ) : (
