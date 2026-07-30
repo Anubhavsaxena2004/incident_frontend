@@ -10,7 +10,7 @@ import CreateIncidentModal from './components/CreateIncidentModal';
 import IncidentDetailModal from './components/IncidentDetailModal';
 import NotificationToast from './components/NotificationToast';
 import { getIncidents, getCurrentUser, deleteIncident, logoutUser } from './api/client';
-import { ShieldAlert, AlertCircle, PlusCircle, RefreshCw, LayoutGrid, List, LogIn, Lock } from 'lucide-react';
+import { ShieldAlert, AlertCircle, PlusCircle, RefreshCw, LayoutGrid, List, LogIn, Lock, UserCheck, Shield } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -54,7 +54,6 @@ export default function App() {
       fetchCurrentUser();
       fetchIncidents();
     } else {
-      // Clear any stale local data
       localStorage.removeItem('user_info');
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
@@ -172,7 +171,7 @@ export default function App() {
       }
     } catch (err) {
       console.error(err);
-      showNotification('error', 'Failed to delete incident. Authentication required.');
+      showNotification('error', 'Failed to delete incident. Authorization required.');
     }
   };
 
@@ -190,6 +189,9 @@ export default function App() {
       setIsCreateOpen(true);
     }
   };
+
+  const isOperator = currentUser?.role === 'OPERATOR';
+  const isAdmin = currentUser?.role === 'ADMIN';
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-dark)' }}>
@@ -251,7 +253,7 @@ export default function App() {
           </div>
         )}
 
-        {/* UNAUTHENTICATED SCREEN: When no user is logged in */}
+        {/* UNAUTHENTICATED SCREEN */}
         {!currentUser ? (
           <div className="glass-panel" style={{ textAlign: 'center', padding: '4.5rem 2rem', background: 'rgba(22, 28, 44, 0.7)', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
             <div style={{ background: 'rgba(59, 130, 246, 0.12)', width: '84px', height: '84px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
@@ -270,7 +272,7 @@ export default function App() {
             </div>
           </div>
         ) : (
-          /* AUTHENTICATED SCREEN: Shows real backend data */
+          /* AUTHENTICATED SCREEN */
           <>
             {/* Incident Feed Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
@@ -281,7 +283,7 @@ export default function App() {
                 <h2 style={{ fontSize: '1.25rem', color: '#ffffff', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span>Live Emergency Incident Feed</span>
                   <span style={{ fontSize: '0.875rem', color: '#94a3b8', fontWeight: 500 }}>
-                    ({incidents.length} active records in database)
+                    ({incidents.length} active records)
                   </span>
                 </h2>
               </div>
@@ -313,7 +315,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Loading State with Shimmer Skeleton Cards */}
+            {/* Loading State */}
             {loading ? (
               <div style={{
                 display: 'grid',
@@ -325,21 +327,39 @@ export default function App() {
                 ))}
               </div>
             ) : incidents.length === 0 ? (
-              /* Real Database Empty State */
+              /* Empty State differentiated by Role */
               <div className="glass-panel" style={{ textAlign: 'center', padding: '4.5rem 2rem', background: 'rgba(22, 28, 44, 0.6)' }}>
-                <div style={{ background: 'rgba(255, 255, 255, 0.04)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                  <ShieldAlert size={42} color="#64748b" />
+                <div style={{ background: isOperator ? 'rgba(139, 92, 246, 0.12)' : 'rgba(255, 255, 255, 0.04)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', border: `1px solid ${isOperator ? 'rgba(139, 92, 246, 0.3)' : 'rgba(255, 255, 255, 0.1)'}` }}>
+                  {isOperator ? <UserCheck size={42} color="#c084fc" /> : <ShieldAlert size={42} color="#64748b" />}
                 </div>
-                <h3 style={{ fontSize: '1.25rem', color: '#f8fafc', marginBottom: '0.5rem', fontWeight: 700 }}>
-                  No Real Incidents in Database
+                
+                <h3 style={{ fontSize: '1.3rem', color: '#f8fafc', marginBottom: '0.5rem', fontWeight: 700 }}>
+                  {isOperator ? 'No Incidents Currently Assigned to Your Operator ID' : 'No Incident Records Found'}
                 </h3>
-                <p style={{ color: '#94a3b8', maxWidth: '460px', margin: '0 auto 1.5rem', fontSize: '0.9rem', lineHeight: 1.5 }}>
-                  There are currently no real incident reports recorded in the backend database. Log an emergency report to populate the real incident feed.
+                
+                <p style={{ color: '#94a3b8', maxWidth: '520px', margin: '0 auto 1.5rem', fontSize: '0.9rem', lineHeight: 1.6 }}>
+                  {isOperator ? (
+                    <>
+                      You are logged in as an <strong>OPERATOR ({currentUser.username})</strong>. Django's backend automatically filters records to display only incidents assigned specifically to your operator ID.
+                      <br /><br />
+                      To view all system incidents, log in as an <strong>ADMIN</strong> account or have an administrator assign reported incidents to Operator ID #{currentUser.id}.
+                    </>
+                  ) : (
+                    'No active emergency incident reports exist in the database matching your query. Submit an emergency report to log a new incident.'
+                  )}
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
+
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <button className="btn btn-outline" onClick={() => setFilters({ category: '', status: '', priority: '', search: '' })}>
-                    Reset Search Filters
+                    Reset Filters
                   </button>
+
+                  {isOperator && (
+                    <button className="btn btn-outline" onClick={handleLogout} style={{ borderColor: 'rgba(139, 92, 246, 0.4)', color: '#c084fc' }}>
+                      <LogIn size={15} /> Switch to Admin Account
+                    </button>
+                  )}
+
                   <button className="btn btn-primary" onClick={handleOpenCreateReport}>
                     <PlusCircle size={16} /> Log Emergency Report
                   </button>
