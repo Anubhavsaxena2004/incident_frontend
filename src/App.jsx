@@ -44,12 +44,19 @@ export default function App() {
   // Load initial session and incidents
   useEffect(() => {
     const savedUser = localStorage.getItem('user_info');
-    if (savedUser) {
+    const token = localStorage.getItem('access_token');
+    
+    if (savedUser && token) {
       try {
         setCurrentUser(JSON.parse(savedUser));
       } catch (e) {
         console.error(e);
       }
+    } else {
+      localStorage.removeItem('user_info');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      setCurrentUser(null);
     }
 
     fetchCurrentUser();
@@ -58,7 +65,11 @@ export default function App() {
     // Auto logout handler
     const handleAutoLogout = () => {
       setCurrentUser(null);
+      localStorage.removeItem('user_info');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
       showNotification('error', 'Session expired. Please log in again.');
+      fetchIncidents();
     };
     window.addEventListener('auth:logout', handleAutoLogout);
 
@@ -90,13 +101,22 @@ export default function App() {
 
   const fetchCurrentUser = async () => {
     const token = localStorage.getItem('access_token');
-    if (!token) return;
+    if (!token) {
+      setCurrentUser(null);
+      return;
+    }
     try {
       const user = await getCurrentUser();
       setCurrentUser(user);
       localStorage.setItem('user_info', JSON.stringify(user));
     } catch (err) {
       console.warn('Could not fetch user profile:', err);
+      if (err.response?.status === 401) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_info');
+        setCurrentUser(null);
+      }
     }
   };
 
@@ -113,6 +133,10 @@ export default function App() {
       if (err.response?.status === 401) {
         setIs401Error(true);
         setError('Authentication required. Please sign in to view and manage live emergency incident telemetry.');
+        if (!localStorage.getItem('access_token')) {
+          setCurrentUser(null);
+          localStorage.removeItem('user_info');
+        }
       } else {
         setError('Could not connect to incident backend service. Please check network connection or CORS config.');
       }
@@ -205,7 +229,7 @@ export default function App() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               {is401Error ? (
                 <button className="btn btn-primary btn-sm" onClick={() => setIsAuthOpen(true)}>
-                  <LogIn size={14} /> Sign In to System
+                  <LogIn size={14} /> Sign In / Register
                 </button>
               ) : (
                 <button className="btn btn-outline btn-sm" onClick={fetchIncidents} style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }}>

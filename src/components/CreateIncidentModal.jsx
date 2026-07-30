@@ -46,7 +46,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }) {
         const msg = Array.isArray(errRes[firstKey]) ? errRes[firstKey][0] : errRes[firstKey];
         setError(`${firstKey}: ${msg}`);
       } else {
-        setError('Failed to log emergency incident. Please verify inputs.');
+        setError('Failed to log emergency incident. Please verify inputs or authenticate.');
       }
     } finally {
       setLoading(false);
@@ -66,10 +66,10 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }) {
           setGeoLoading(false);
         },
         (err) => {
-          console.warn(err);
-          setError('Unable to retrieve GPS coordinates. Default coordinates retained.');
+          console.log('Geolocation skipped or prompt closed.');
           setGeoLoading(false);
-        }
+        },
+        { timeout: 5000, enableHighAccuracy: false }
       );
     }
   };
