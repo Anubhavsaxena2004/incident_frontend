@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, MapPin, Shield, User, History, Activity, Edit, AlertCircle, CheckCircle } from 'lucide-react';
+import StatusBadge from './StatusBadge';
+import { X, Clock, MapPin, Shield, User, History, Activity, Edit, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
 import { updateIncident, getIncidentTimeline, getIncidentAssignments } from '../api/client';
 
 export default function IncidentDetailModal({ isOpen, onClose, incident, onUpdateSuccess, currentUser }) {
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'update', 'timeline', 'assignments'
+  const [activeTab, setActiveTab] = useState('overview');
   const [timeline, setTimeline] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
 
-  // Update Form State
   const [updateData, setUpdateData] = useState({
     status: incident?.status || 'REPORTED',
     priority: incident?.priority || 'MEDIUM',
@@ -73,7 +73,7 @@ export default function IncidentDetailModal({ isOpen, onClose, incident, onUpdat
       }
 
       if (Object.keys(payload).length === 0) {
-        setUpdateError('No changes detected in status, priority, remarks, or assignment.');
+        setUpdateError('No status, priority, remarks, or assignment changes were modified.');
         setUpdateLoading(false);
         return;
       }
@@ -90,7 +90,7 @@ export default function IncidentDetailModal({ isOpen, onClose, incident, onUpdat
         const msg = Array.isArray(errRes[firstKey]) ? errRes[firstKey][0] : errRes[firstKey];
         setUpdateError(`${firstKey}: ${msg}`);
       } else {
-        setUpdateError('Failed to update incident. Operator permissions may be required.');
+        setUpdateError('Failed to update incident workflow. Operator permissions required.');
       }
     } finally {
       setUpdateLoading(false);
@@ -112,32 +112,35 @@ export default function IncidentDetailModal({ isOpen, onClose, incident, onUpdat
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
+          background: 'rgba(22, 28, 44, 0.95)'
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-              <span className="badge badge-status">{incident.status}</span>
-              <span className="badge badge-critical">{incident.priority}</span>
-              <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>ID: {incident.id}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+              <StatusBadge type="status" value={incident.status} />
+              <StatusBadge type="priority" value={incident.priority} />
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8', background: 'rgba(255,255,255,0.06)', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
+                ID: #{incident.id}
+              </span>
             </div>
-            <h3 style={{ fontSize: '1.25rem', color: '#fff', margin: 0 }}>
+            <h3 style={{ fontSize: '1.25rem', color: '#ffffff', margin: 0, fontWeight: 700 }}>
               {incident.title}
             </h3>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
 
-        {/* Navigation Tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(0,0,0,0.2)' }}>
+        {/* Tab Header Navigation */}
+        <div style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(15, 20, 31, 0.6)' }}>
           <button
             onClick={() => setActiveTab('overview')}
             style={{
               flex: 1, padding: '0.75rem', border: 'none', background: 'none',
-              color: activeTab === 'overview' ? '#3b82f6' : '#9ca3af',
+              color: activeTab === 'overview' ? '#60a5fa' : '#94a3b8',
               borderBottom: activeTab === 'overview' ? '2px solid #3b82f6' : '2px solid transparent',
-              fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+              fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.875rem'
             }}
           >
             <Activity size={15} /> Overview
@@ -147,81 +150,81 @@ export default function IncidentDetailModal({ isOpen, onClose, incident, onUpdat
             onClick={() => setActiveTab('update')}
             style={{
               flex: 1, padding: '0.75rem', border: 'none', background: 'none',
-              color: activeTab === 'update' ? '#3b82f6' : '#9ca3af',
+              color: activeTab === 'update' ? '#60a5fa' : '#94a3b8',
               borderBottom: activeTab === 'update' ? '2px solid #3b82f6' : '2px solid transparent',
-              fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+              fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.875rem'
             }}
           >
-            <Edit size={15} /> Workflow & Status
+            <Edit size={15} /> Workflow & Dispatch
           </button>
 
           <button
             onClick={() => setActiveTab('timeline')}
             style={{
               flex: 1, padding: '0.75rem', border: 'none', background: 'none',
-              color: activeTab === 'timeline' ? '#3b82f6' : '#9ca3af',
+              color: activeTab === 'timeline' ? '#60a5fa' : '#94a3b8',
               borderBottom: activeTab === 'timeline' ? '2px solid #3b82f6' : '2px solid transparent',
-              fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+              fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.875rem'
             }}
           >
-            <Clock size={15} /> Timeline ({timeline.length})
+            <Clock size={15} /> Audit Timeline ({timeline.length})
           </button>
 
           <button
             onClick={() => setActiveTab('assignments')}
             style={{
               flex: 1, padding: '0.75rem', border: 'none', background: 'none',
-              color: activeTab === 'assignments' ? '#3b82f6' : '#9ca3af',
+              color: activeTab === 'assignments' ? '#60a5fa' : '#94a3b8',
               borderBottom: activeTab === 'assignments' ? '2px solid #3b82f6' : '2px solid transparent',
-              fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+              fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.875rem'
             }}
           >
             <History size={15} /> Assignments ({assignments.length})
           </button>
         </div>
 
-        {/* Modal Tab Contents */}
+        {/* Tab Contents */}
         <div style={{ padding: '1.5rem', minHeight: '280px' }}>
           
           {/* 1. OVERVIEW */}
           {activeTab === 'overview' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
-                <h4 style={{ fontSize: '0.8125rem', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                  Description
+                <h4 style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>
+                  Emergency Description
                 </h4>
-                <p style={{ color: '#e5e7eb', fontSize: '0.95rem', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  {incident.description || 'No detailed description.'}
+                <p style={{ color: '#f8fafc', fontSize: '0.95rem', background: 'rgba(15, 20, 31, 0.7)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)', lineHeight: 1.5 }}>
+                  {incident.description || 'No detailed description recorded for this incident.'}
                 </p>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.875rem', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Location & Coordinates</div>
-                  <div style={{ fontSize: '0.9rem', color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.25rem' }}>
-                    <MapPin size={15} color="#3b82f6" />
+                <div style={{ background: 'rgba(15, 20, 31, 0.7)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Location & GPS</div>
+                  <div style={{ fontSize: '0.925rem', color: '#f8fafc', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.35rem' }}>
+                    <MapPin size={16} color="#3b82f6" />
                     <span>{incident.address}</span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.2rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>
                     GPS: {incident.latitude}, {incident.longitude}
                   </div>
                 </div>
 
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.875rem', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Assigned Responder</div>
-                  <div style={{ fontSize: '0.9rem', color: '#c084fc', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.25rem' }}>
-                    <User size={15} />
+                <div style={{ background: 'rgba(15, 20, 31, 0.7)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Assigned Responder</div>
+                  <div style={{ fontSize: '0.925rem', color: '#c084fc', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.35rem' }}>
+                    <User size={16} />
                     <span>{incident.assigned_to_name || (incident.assigned_to ? `Operator #${incident.assigned_to}` : 'Unassigned')}</span>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.2rem' }}>
-                    Created: {formatDate(incident.created_at)}
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>
+                    Logged: {formatDate(incident.created_at)}
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* 2. WORKFLOW UPDATE */}
+          {/* 2. WORKFLOW & STATUS UPDATE */}
           {activeTab === 'update' && (
             <form onSubmit={handleUpdateSubmit}>
               {updateError && (
@@ -276,11 +279,11 @@ export default function IncidentDetailModal({ isOpen, onClose, incident, onUpdat
               </div>
 
               <div className="form-group">
-                <label className="form-label">Operator Remarks / Dispatch Notes</label>
+                <label className="form-label">Operator Dispatch Notes / Action Logs</label>
                 <textarea
                   className="form-control"
                   rows={3}
-                  placeholder="e.g. Dispatching Operator Bob to contain the leak. Emergency personnel on site."
+                  placeholder="e.g. Dispatched HAZMAT Unit 4 to scene. Emergency situation under active containment."
                   value={updateData.remarks}
                   onChange={(e) => setUpdateData({ ...updateData, remarks: e.target.value })}
                 />
@@ -292,39 +295,45 @@ export default function IncidentDetailModal({ isOpen, onClose, incident, onUpdat
                 style={{ width: '100%', marginTop: '0.5rem' }}
                 disabled={updateLoading}
               >
-                {updateLoading ? 'Saving Changes...' : 'Update Incident Workflow'}
+                {updateLoading ? 'Saving Changes...' : 'Update Incident Dispatch Workflow'}
               </button>
             </form>
           )}
 
-          {/* 3. TIMELINE */}
+          {/* 3. AUDIT TIMELINE */}
           {activeTab === 'timeline' && (
             <div>
               {loadingAudit ? (
-                <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem' }}>Loading timeline events...</div>
+                <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>Loading timeline telemetry...</div>
               ) : timeline.length === 0 ? (
-                <div style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>No status transitions recorded yet.</div>
+                <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>No status transition events logged yet.</div>
               ) : (
                 <div style={{ borderLeft: '2px solid rgba(59, 130, 246, 0.3)', paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                   {timeline.map((item, idx) => (
                     <div key={idx} style={{ position: 'relative' }}>
                       <div style={{
                         position: 'absolute', left: '-1.65rem', top: '0.2rem', width: '12px', height: '12px',
-                        borderRadius: '50%', background: '#3b82f6', border: '2px solid #0b0f19'
+                        borderRadius: '50%', background: '#3b82f6', border: '2px solid #161c2b'
                       }} />
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                        <span className="badge badge-status" style={{ fontSize: '0.7rem' }}>
-                          {item.old_status || 'INIT'} ➔ {item.new_status || item.status}
-                        </span>
-                        <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', fontSize: '0.7rem' }}>
+                            {item.old_status || 'INIT'}
+                          </span>
+                          <ArrowRight size={12} color="#94a3b8" />
+                          <span className="badge" style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#c084fc', fontSize: '0.7rem' }}>
+                            {item.new_status || item.status}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
                           {formatDate(item.timestamp || item.created_at)}
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.85rem', color: '#d1d5db' }}>
-                        {item.remarks || item.description || 'Status transition logged.'}
+                      <div style={{ fontSize: '0.85rem', color: '#e2e8f0' }}>
+                        {item.remarks || item.description || 'Status transition recorded.'}
                       </div>
                       {item.updated_by && (
-                        <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.2rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.2rem' }}>
                           By: {item.updated_by_name || `User #${item.updated_by}`}
                         </div>
                       )}
@@ -335,27 +344,27 @@ export default function IncidentDetailModal({ isOpen, onClose, incident, onUpdat
             </div>
           )}
 
-          {/* 4. ASSIGNMENTS */}
+          {/* 4. ASSIGNMENT HISTORY */}
           {activeTab === 'assignments' && (
             <div>
               {loadingAudit ? (
-                <div style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem' }}>Loading assignment history...</div>
+                <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>Loading assignment history...</div>
               ) : assignments.length === 0 ? (
-                <div style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>No operator reassignments recorded yet.</div>
+                <div style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>No operator reassignments logged yet.</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {assignments.map((item, idx) => (
-                    <div key={idx} style={{ background: 'rgba(255,255,255,0.03)', padding: '0.875rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div key={idx} style={{ background: 'rgba(15, 20, 31, 0.7)', padding: '0.875rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
                         <div style={{ fontWeight: 600, color: '#c084fc', fontSize: '0.875rem' }}>
-                          Assigned to: {item.assigned_to_name || `Operator #${item.assigned_to}`}
+                          Assigned Responder: {item.assigned_to_name || `Operator #${item.assigned_to}`}
                         </div>
-                        <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
                           {formatDate(item.assigned_at || item.created_at)}
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.8125rem', color: '#9ca3af' }}>
-                        {item.remarks || 'Assignment updated'}
+                      <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>
+                        {item.remarks || 'Assignment updated.'}
                       </div>
                     </div>
                   ))}

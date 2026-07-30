@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { X, PlusCircle, AlertCircle, MapPin } from 'lucide-react';
+import { X, PlusCircle, AlertCircle, MapPin, Navigation, Flame, ShieldAlert, Cross, Car, AlertTriangle } from 'lucide-react';
 import { createIncident } from '../api/client';
 
 export default function CreateIncidentModal({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [geoLoading, setGeoLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -24,19 +25,18 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }) {
     setLoading(true);
 
     try {
-      // Validate fields
       const payload = {
         title: formData.title.trim(),
         description: formData.description.trim(),
         category: formData.category,
         latitude: String(formData.latitude),
         longitude: String(formData.longitude),
-        address: formData.address.trim() || 'Sector 1, Main Command Area',
+        address: formData.address.trim() || 'Command Center Dispatch Zone 1',
         priority: formData.priority,
       };
 
       const created = await createIncident(payload);
-      onSuccess('Emergency incident logged successfully!', created);
+      onSuccess('Emergency incident report dispatched successfully!', created);
       onClose();
     } catch (err) {
       console.error(err);
@@ -46,7 +46,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }) {
         const msg = Array.isArray(errRes[firstKey]) ? errRes[firstKey][0] : errRes[firstKey];
         setError(`${firstKey}: ${msg}`);
       } else {
-        setError('Failed to log incident. Please verify coordinates & required fields.');
+        setError('Failed to log emergency incident. Please verify inputs.');
       }
     } finally {
       setLoading(false);
@@ -55,6 +55,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }) {
 
   const handleUseCurrentLocation = () => {
     if ('geolocation' in navigator) {
+      setGeoLoading(true);
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setFormData((prev) => ({
@@ -62,36 +63,51 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }) {
             latitude: String(position.coords.latitude.toFixed(6)),
             longitude: String(position.coords.longitude.toFixed(6)),
           }));
+          setGeoLoading(false);
         },
         (err) => {
           console.warn(err);
-          setError('Unable to fetch live GPS location. Default coordinates kept.');
+          setError('Unable to retrieve GPS coordinates. Default coordinates retained.');
+          setGeoLoading(false);
         }
       );
     }
   };
 
+  const priorityOptions = [
+    { value: 'LOW', label: 'Low', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' },
+    { value: 'MEDIUM', label: 'Medium', color: '#60a5fa', bg: 'rgba(59, 130, 246, 0.15)' },
+    { value: 'HIGH', label: 'High', color: '#fbbf24', bg: 'rgba(245, 158, 11, 0.15)' },
+    { value: 'CRITICAL', label: 'Critical', color: '#f87171', bg: 'rgba(239, 68, 68, 0.15)' },
+  ];
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         
-        {/* Modal Header */}
+        {/* Header */}
         <div style={{
           padding: '1.25rem 1.5rem',
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
+          background: 'rgba(22, 28, 44, 0.95)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ background: 'rgba(239, 68, 68, 0.15)', padding: '0.5rem', borderRadius: '8px' }}>
-              <PlusCircle size={20} color="#ef4444" />
+            <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.5rem', borderRadius: '8px' }}>
+              <PlusCircle size={22} color="#ef4444" />
             </div>
-            <h3 style={{ fontSize: '1.15rem', color: '#fff', margin: 0 }}>
-              Report New Emergency Incident
-            </h3>
+            <div>
+              <h3 style={{ fontSize: '1.2rem', color: '#ffffff', margin: 0 }}>
+                Log New Emergency Report
+              </h3>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                Dispatch incident alert to real-time SOC responder network
+              </span>
+            </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
@@ -123,14 +139,42 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }) {
             <input
               type="text"
               className="form-control"
-              placeholder="e.g. Chemical Spill in Warehouse B"
+              placeholder="e.g. Hazardous Spill on Main Highway / Power Outage Substation B"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               required
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          {/* Priority Grid Pills */}
+          <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+            <label className="form-label">Priority Level *</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+              {priorityOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, priority: opt.value })}
+                  style={{
+                    padding: '0.5rem',
+                    borderRadius: '8px',
+                    border: `1px solid ${formData.priority === opt.value ? opt.color : 'rgba(255,255,255,0.1)'}`,
+                    background: formData.priority === opt.value ? opt.bg : 'rgba(15, 20, 31, 0.6)',
+                    color: formData.priority === opt.value ? opt.color : '#94a3b8',
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'center'
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
             <div className="form-group">
               <label className="form-label">Category *</label>
               <select
@@ -138,44 +182,30 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }) {
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               >
-                <option value="ACCIDENT">Accident</option>
+                <option value="ACCIDENT">Car Accident</option>
                 <option value="FIRE">Fire Emergency</option>
                 <option value="CRIME">Crime / Security</option>
                 <option value="MEDICAL">Medical Emergency</option>
                 <option value="NATURAL_DISASTER">Natural Disaster</option>
-                <option value="OTHER">Other</option>
+                <option value="OTHER">Other Incident</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Initial Priority</label>
-              <select
+              <label className="form-label">Address / Location *</label>
+              <input
+                type="text"
                 className="form-control"
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-              >
-                <option value="LOW">Low</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
-                <option value="CRITICAL">Critical</option>
-              </select>
+                placeholder="Sector 4, Building B, North Wing"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                required
+              />
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Address / Location Description *</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Building C, Sector 3, Industrial Park"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              required
-            />
-          </div>
-
           {/* Coordinates */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
             <div className="form-group">
               <label className="form-label">Latitude *</label>
               <input
@@ -203,18 +233,20 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }) {
           <button
             type="button"
             className="btn btn-outline btn-sm"
-            style={{ width: '100%', marginBottom: '1rem' }}
+            style={{ width: '100%', marginBottom: '1rem', color: '#60a5fa', borderColor: 'rgba(59, 130, 246, 0.3)' }}
             onClick={handleUseCurrentLocation}
+            disabled={geoLoading}
           >
-            <MapPin size={14} /> Use Device GPS Coordinates
+            <Navigation size={14} className={geoLoading ? 'spin-icon' : ''} />
+            <span>{geoLoading ? 'Fetching GPS Coordinates...' : 'Use Current Device Coordinates'}</span>
           </button>
 
           <div className="form-group">
-            <label className="form-label">Description *</label>
+            <label className="form-label">Incident Description *</label>
             <textarea
               className="form-control"
-              rows={4}
-              placeholder="Provide specific details about the emergency, trapped personnel, hazards, or immediate assistance needed..."
+              rows={3}
+              placeholder="Detail hazards, victims, physical damage, casualties, or immediate emergency response required..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               required
@@ -226,7 +258,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }) {
               Cancel
             </button>
             <button type="submit" className="btn btn-danger" style={{ flex: 2 }} disabled={loading}>
-              {loading ? 'Submitting Report...' : 'Dispatch Emergency Report'}
+              {loading ? 'Dispatching Incident...' : 'Dispatch Emergency Report'}
             </button>
           </div>
 

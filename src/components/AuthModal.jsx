@@ -7,13 +7,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Login state
   const [loginData, setLoginData] = useState({
     username: '',
     password: '',
   });
 
-  // Register state
   const [registerData, setRegisterData] = useState({
     username: '',
     password: '',
@@ -36,7 +34,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
       onClose();
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.detail || err.response?.data?.error || 'Invalid credentials. Please try again.');
+      setError(err.response?.data?.detail || err.response?.data?.error || 'Invalid credentials. Please verify your username & password.');
     } finally {
       setLoading(false);
     }
@@ -48,12 +46,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
     setLoading(true);
     try {
       await registerUser(registerData);
-      // Auto-login after registration
       const loginRes = await loginUser({
         username: registerData.username,
         password: registerData.password,
       });
-      onSuccess('Account created and logged in successfully!', loginRes.user);
+      onSuccess('Account created and authenticated successfully!', loginRes.user);
       onClose();
     } catch (err) {
       console.error(err);
@@ -63,7 +60,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
         const msg = Array.isArray(errRes[firstKey]) ? errRes[firstKey][0] : errRes[firstKey];
         setError(`${firstKey}: ${msg}`);
       } else {
-        setError('Registration failed. Please check your inputs.');
+        setError('Registration failed. Please check inputs.');
       }
     } finally {
       setLoading(false);
@@ -80,26 +77,32 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
+          background: 'rgba(22, 28, 44, 0.95)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ background: 'rgba(59, 130, 246, 0.15)', padding: '0.5rem', borderRadius: '8px' }}>
+            <div style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '0.5rem', borderRadius: '8px' }}>
               <Shield size={20} color="#3b82f6" />
             </div>
-            <h3 style={{ fontSize: '1.15rem', color: '#fff', margin: 0 }}>
-              {isRegister ? 'Create Incident System Account' : 'Command Center Authentication'}
-            </h3>
+            <div>
+              <h3 style={{ fontSize: '1.15rem', color: '#ffffff', margin: 0, fontWeight: 700 }}>
+                {isRegister ? 'Register Command Account' : 'Command System Login'}
+              </h3>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                Incident Response Telemetry Authentication
+              </span>
+            </div>
           </div>
           <button 
             onClick={onClose}
-            style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Tab Selector */}
-        <div style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(0,0,0,0.2)' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(15, 20, 31, 0.6)' }}>
           <button
             onClick={() => { setIsRegister(false); setError(null); }}
             style={{
@@ -107,14 +110,15 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
               padding: '0.75rem',
               border: 'none',
               background: 'none',
-              color: !isRegister ? '#3b82f6' : '#9ca3af',
+              color: !isRegister ? '#60a5fa' : '#94a3b8',
               borderBottom: !isRegister ? '2px solid #3b82f6' : '2px solid transparent',
               fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.5rem'
+              gap: '0.5rem',
+              fontSize: '0.875rem'
             }}
           >
             <LogIn size={16} /> Sign In
@@ -126,21 +130,22 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
               padding: '0.75rem',
               border: 'none',
               background: 'none',
-              color: isRegister ? '#3b82f6' : '#9ca3af',
+              color: isRegister ? '#60a5fa' : '#94a3b8',
               borderBottom: isRegister ? '2px solid #3b82f6' : '2px solid transparent',
               fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.5rem'
+              gap: '0.5rem',
+              fontSize: '0.875rem'
             }}
           >
             <UserPlus size={16} /> Register
           </button>
         </div>
 
-        {/* Error Alert */}
+        {/* Error Alert Banner */}
         {error && (
           <div style={{
             margin: '1rem 1.5rem 0',

@@ -14,9 +14,18 @@ const api = axios.create({
   },
 });
 
-// Request Interceptor: Attach Access Token
+// Request Interceptor: Ensure Trailing Slash & Attach Access Token
 api.interceptors.request.use(
   (config) => {
+    // 1. Enforce Trailing Slash on Django REST endpoints to prevent HTTP 301 POST->GET 405 errors
+    if (config.url) {
+      const [path, queryString] = config.url.split('?');
+      if (path && !path.endsWith('/') && !path.includes('.')) {
+        config.url = `${path}/${queryString ? `?${queryString}` : ''}`;
+      }
+    }
+
+    // 2. Attach Authorization Token
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -48,7 +57,8 @@ api.interceptors.response.use(
     
     // Check if 401 unauthorized and not already retried
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
-      if (originalRequest.url.includes('/users/login/') || originalRequest.url.includes('/users/register/')) {
+      // Don't refresh on auth login/register endpoints
+      if (originalRequest.url && (originalRequest.url.includes('/users/login') || originalRequest.url.includes('/users/register'))) {
         return Promise.reject(error);
       }
 

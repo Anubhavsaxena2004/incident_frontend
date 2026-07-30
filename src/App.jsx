@@ -1,20 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import SystemHealthBar from './components/SystemHealthBar';
 import Navbar from './components/Navbar';
 import StatCards from './components/StatCards';
 import IncidentFilter from './components/IncidentFilter';
 import IncidentCard from './components/IncidentCard';
+import SkeletonCard from './components/SkeletonCard';
 import AuthModal from './components/AuthModal';
 import CreateIncidentModal from './components/CreateIncidentModal';
 import IncidentDetailModal from './components/IncidentDetailModal';
 import NotificationToast from './components/NotificationToast';
 import { getIncidents, getCurrentUser, deleteIncident, logoutUser } from './api/client';
-import { ShieldAlert, AlertCircle, PlusCircle, RefreshCw } from 'lucide-react';
+import { ShieldAlert, AlertCircle, PlusCircle, RefreshCw, LayoutGrid, List } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Layout View Mode: 'grid' | 'list'
+  const [viewMode, setViewMode] = useState('grid');
 
   // Modals state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -23,6 +28,9 @@ export default function App() {
   
   // Notification Toast state
   const [notification, setNotification] = useState(null);
+
+  // Search input ref for keyboard shortcut focus
+  const searchInputRef = useRef(null);
 
   // Filter state
   const [filters, setFilters] = useState({
@@ -46,15 +54,27 @@ export default function App() {
     fetchCurrentUser();
     fetchIncidents();
 
-    // Listen for auto-logout event from API interceptor
+    // Auto logout handler
     const handleAutoLogout = () => {
       setCurrentUser(null);
       showNotification('error', 'Session expired. Please log in again.');
     };
     window.addEventListener('auth:logout', handleAutoLogout);
 
+    // Global keyboard shortcut ('/' to focus search)
+    const handleKeyDown = (e) => {
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
       window.removeEventListener('auth:logout', handleAutoLogout);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -88,7 +108,7 @@ export default function App() {
       setIncidents(list);
     } catch (err) {
       console.error('Failed to load incidents:', err);
-      setError('Could not connect to incident backend service (http://52.63.212.154). Please check connection or login.');
+      setError('Could not connect to incident backend service (http://52.63.212.154). Please check connection or authentication state.');
     } finally {
       setLoading(false);
     }
@@ -101,7 +121,7 @@ export default function App() {
   };
 
   const handleDeleteIncident = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this emergency incident record?')) return;
+    if (!window.confirm('Are you sure you want to permanently delete this emergency incident record?')) return;
     try {
       await deleteIncident(id);
       showNotification('success', 'Incident record deleted successfully');
@@ -115,10 +135,19 @@ export default function App() {
     }
   };
 
+  const focusSearch = () => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-dark)' }}>
       
-      {/* Top Header */}
+      {/* Real-time System Telemetry Header */}
+      <SystemHealthBar />
+
+      {/* Main Command Navbar */}
       <Navbar
         currentUser={currentUser}
         onOpenAuth={() => setIsAuthOpen(true)}
@@ -126,26 +155,29 @@ export default function App() {
         onOpenCreate={() => setIsCreateOpen(true)}
         onRefresh={fetchIncidents}
         isLoading={loading}
+        onFocusSearch={focusSearch}
       />
 
-      {/* Main Content Area */}
-      <main style={{ maxWidth: '1280px', width: '100%', margin: '0 auto', padding: '0 1.5rem 3rem', flex: 1 }}>
+      {/* Dashboard Body Area */}
+      <main style={{ maxWidth: '1380px', width: '100%', margin: '0 auto', padding: '0 1.5rem 3rem', flex: 1 }}>
         
-        {/* Realtime Stat Cards */}
+        {/* Real-time SOC Stat Cards with Sparklines */}
         <StatCards incidents={incidents} />
 
-        {/* Filter Controls */}
+        {/* Filter Controls & Search */}
         <IncidentFilter
           filters={filters}
           setFilters={setFilters}
           onReset={() => setFilters({ category: '', status: '', priority: '', search: '' })}
+          totalCount={incidents.length}
+          searchInputRef={searchInputRef}
         />
 
         {/* Error Alert Banner */}
         {error && (
           <div style={{
-            background: 'rgba(239, 68, 68, 0.12)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
+            background: 'rgba(239, 68, 68, 0.14)',
+            border: '1px solid rgba(239, 68, 68, 0.35)',
             borderRadius: '12px',
             padding: '1rem 1.25rem',
             color: '#f87171',
@@ -159,52 +191,90 @@ export default function App() {
               <AlertCircle size={20} style={{ flexShrink: 0 }} />
               <span style={{ fontSize: '0.875rem' }}>{error}</span>
             </div>
-            <button className="btn btn-outline btn-sm" onClick={fetchIncidents}>
-              <RefreshCw size={14} /> Retry
+            <button className="btn btn-outline btn-sm" onClick={fetchIncidents} style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }}>
+              <RefreshCw size={14} /> Retry Connection
             </button>
           </div>
         )}
 
-        {/* Incidents Grid */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <h2 style={{ fontSize: '1.25rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <ShieldAlert size={20} color="#3b82f6" />
-            <span>Emergency Incident Feed</span>
-            <span style={{ fontSize: '0.875rem', color: '#9ca3af', fontWeight: 400 }}>({incidents.length} found)</span>
-          </h2>
+        {/* Incident Feed Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ background: 'rgba(59, 130, 246, 0.15)', padding: '0.4rem', borderRadius: '8px' }}>
+              <ShieldAlert size={20} color="#3b82f6" />
+            </div>
+            <h2 style={{ fontSize: '1.25rem', color: '#ffffff', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>Live Emergency Incident Feed</span>
+              <span style={{ fontSize: '0.875rem', color: '#94a3b8', fontWeight: 500 }}>
+                ({incidents.length} active records)
+              </span>
+            </h2>
+          </div>
 
-          <button className="btn btn-primary btn-sm" onClick={() => setIsCreateOpen(true)}>
-            <PlusCircle size={15} /> Log New Emergency
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {/* View Mode Toggle */}
+            <div style={{ display: 'flex', background: 'rgba(15, 20, 31, 0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '2px' }}>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`btn btn-sm ${viewMode === 'grid' ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ padding: '0.3rem 0.6rem' }}
+                title="Grid View"
+              >
+                <LayoutGrid size={15} />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`btn btn-sm ${viewMode === 'list' ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ padding: '0.3rem 0.6rem' }}
+                title="Dense List View"
+              >
+                <List size={15} />
+              </button>
+            </div>
+
+            <button className="btn btn-primary btn-sm" onClick={() => setIsCreateOpen(true)}>
+              <PlusCircle size={15} /> Log Emergency Report
+            </button>
+          </div>
         </div>
 
+        {/* Loading State with Shimmer Skeleton Cards */}
         {loading ? (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gridTemplateColumns: viewMode === 'grid' ? 'repeat(auto-fill, minmax(340px, 1fr))' : '1fr',
             gap: '1.25rem'
           }}>
             {[1, 2, 3, 4, 5, 6].map((n) => (
-              <div key={n} className="glass-panel" style={{ height: '220px', opacity: 0.5, animation: 'pulse 1.5s infinite' }} />
+              <SkeletonCard key={n} />
             ))}
           </div>
         ) : incidents.length === 0 ? (
-          <div className="glass-panel" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-            <ShieldAlert size={48} color="#6b7280" style={{ marginBottom: '1rem' }} />
-            <h3 style={{ fontSize: '1.25rem', color: '#e5e7eb', marginBottom: '0.5rem' }}>
-              No Incidents Matched
+          /* Empty State */
+          <div className="glass-panel" style={{ textAlign: 'center', padding: '4.5rem 2rem', background: 'rgba(22, 28, 44, 0.6)' }}>
+            <div style={{ background: 'rgba(255, 255, 255, 0.04)', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <ShieldAlert size={42} color="#64748b" />
+            </div>
+            <h3 style={{ fontSize: '1.25rem', color: '#f8fafc', marginBottom: '0.5rem', fontWeight: 700 }}>
+              No Incidents Matched Filter Parameters
             </h3>
-            <p style={{ color: '#9ca3af', maxWidth: '440px', margin: '0 auto 1.5rem', fontSize: '0.9rem' }}>
-              No active emergency reports match your current filter parameters. Submit a new report or adjust filters.
+            <p style={{ color: '#94a3b8', maxWidth: '460px', margin: '0 auto 1.5rem', fontSize: '0.9rem', lineHeight: 1.5 }}>
+              There are currently no active emergency incident reports matching your active search query or filter parameters.
             </p>
-            <button className="btn btn-primary" onClick={() => setIsCreateOpen(true)}>
-              <PlusCircle size={16} /> Submit First Incident Report
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
+              <button className="btn btn-outline" onClick={() => setFilters({ category: '', status: '', priority: '', search: '' })}>
+                Reset All Filters
+              </button>
+              <button className="btn btn-primary" onClick={() => setIsCreateOpen(true)}>
+                <PlusCircle size={16} /> Submit Incident Report
+              </button>
+            </div>
           </div>
         ) : (
+          /* Incidents Feed Grid or List */
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+            gridTemplateColumns: viewMode === 'grid' ? 'repeat(auto-fill, minmax(340px, 1fr))' : '1fr',
             gap: '1.25rem'
           }}>
             {incidents.map((incident) => (
@@ -214,6 +284,7 @@ export default function App() {
                 onViewDetails={(inc) => setSelectedIncident(inc)}
                 onDelete={handleDeleteIncident}
                 currentUser={currentUser}
+                viewMode={viewMode}
               />
             ))}
           </div>
@@ -224,16 +295,16 @@ export default function App() {
       {/* Footer */}
       <footer style={{
         borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-        background: 'rgba(11, 15, 25, 0.95)',
+        background: 'rgba(15, 21, 33, 0.95)',
         padding: '1.25rem 1.5rem',
         textAlign: 'center',
-        color: '#6b7280',
+        color: '#64748b',
         fontSize: '0.8125rem'
       }}>
-        Emergency Incident Reporting System Microservice &bull; API Target: <code>http://52.63.212.154</code>
+        Emergency Incident Response Command Center &bull; Enterprise SOC Console v2.4 &bull; API Endpoint: <code>http://52.63.212.154</code>
       </footer>
 
-      {/* Modals & Toasts */}
+      {/* Modals & Toast Notifications */}
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}

@@ -1,35 +1,37 @@
 import React from 'react';
-import { Shield, AlertTriangle, LogIn, LogOut, User, PlusCircle, RefreshCw, ExternalLink, Activity } from 'lucide-react';
+import { Shield, LogIn, LogOut, User, PlusCircle, RefreshCw, ExternalLink, Activity, Search } from 'lucide-react';
 
-export default function Navbar({ currentUser, onOpenAuth, onLogout, onOpenCreate, onRefresh, isLoading }) {
+export default function Navbar({ currentUser, onOpenAuth, onLogout, onOpenCreate, onRefresh, isLoading, onFocusSearch }) {
   return (
-    <header className="glass-panel" style={{ borderRadius: 0, borderTop: 0, borderLeft: 0, borderRight: 0, marginBottom: '2rem' }}>
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+    <header className="glass-panel" style={{ borderRadius: 0, borderTop: 0, borderLeft: 0, borderRight: 0, marginBottom: '1.5rem', background: 'rgba(22, 28, 44, 0.85)' }}>
+      <div style={{ maxWidth: '1380px', margin: '0 auto', padding: '0.875rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         
-        {/* Brand / Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+        {/* Brand Logo & System Title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{
-            background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+            background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
             padding: '0.625rem',
             borderRadius: '12px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)'
+            boxShadow: '0 4px 18px rgba(239, 68, 68, 0.45)',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
           }}>
-            <Shield size={24} color="#ffffff" />
+            <Shield size={26} color="#ffffff" />
           </div>
+
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <h1 style={{ fontSize: '1.25rem', color: '#ffffff', margin: 0, lineHeight: 1.2 }}>
-                EMERGENCY RESPONSE
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+              <h1 style={{ fontSize: '1.35rem', color: '#ffffff', margin: 0, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+                COMMAND CENTER
               </h1>
-              <span className="badge badge-critical pulse-emergency" style={{ fontSize: '0.65rem', padding: '0.15rem 0.45rem' }}>
-                LIVE COMMAND
+              <span className="badge pulse-emergency" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)', fontSize: '0.65rem', padding: '0.15rem 0.5rem' }}>
+                SOC LIVE
               </span>
             </div>
-            <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-              Incident Reporting & Dispatch System Microservice
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>
+              Enterprise Incident Dispatch & Telemetry Service
             </span>
           </div>
         </div>
@@ -37,17 +39,30 @@ export default function Navbar({ currentUser, onOpenAuth, onLogout, onOpenCreate
         {/* Action Controls & Navigation */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           
+          {/* Quick Search Shortcut Hint */}
+          <button 
+            className="btn btn-outline btn-sm"
+            onClick={onFocusSearch}
+            title="Focus search input (Shortcut: /)"
+            style={{ color: '#94a3b8' }}
+          >
+            <Search size={14} />
+            <span>Search</span>
+            <kbd style={{ background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.35rem', borderRadius: '4px', fontSize: '0.6875rem', color: '#cbd5e1' }}>/</kbd>
+          </button>
+
+          {/* Sync Button */}
           <button 
             className="btn btn-outline btn-sm"
             onClick={onRefresh}
             disabled={isLoading}
-            title="Refresh All Data"
+            title="Refresh All Telemetry Data"
           >
-            <RefreshCw size={15} className={isLoading ? 'spin-icon' : ''} />
+            <RefreshCw size={14} className={isLoading ? 'spin-icon' : ''} />
             <span>Sync</span>
           </button>
 
-          {/* Swagger / Redoc Quick Links */}
+          {/* Swagger API Quick Link */}
           <a
             href="http://52.63.212.154/api/schema/swagger-ui/"
             target="_blank"
@@ -59,14 +74,16 @@ export default function Navbar({ currentUser, onOpenAuth, onLogout, onOpenCreate
             <span>Swagger API</span>
           </a>
 
+          {/* Authentication & User Badge */}
           {currentUser ? (
             <>
               <button 
                 className="btn btn-primary"
                 onClick={onOpenCreate}
+                style={{ padding: '0.5rem 1rem' }}
               >
                 <PlusCircle size={17} />
-                <span>Report Incident</span>
+                <span>Log New Incident</span>
               </button>
 
               <div style={{
@@ -74,17 +91,19 @@ export default function Navbar({ currentUser, onOpenAuth, onLogout, onOpenCreate
                 alignItems: 'center',
                 gap: '0.625rem',
                 background: 'rgba(255, 255, 255, 0.05)',
-                padding: '0.375rem 0.75rem',
+                padding: '0.35rem 0.75rem',
                 borderRadius: '8px',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
+                border: '1px solid rgba(255, 255, 255, 0.12)'
               }}>
-                <User size={16} color="#60a5fa" />
+                <div style={{ background: 'rgba(59, 130, 246, 0.2)', padding: '0.35rem', borderRadius: '6px' }}>
+                  <User size={15} color="#60a5fa" />
+                </div>
                 <div style={{ textAlign: 'left', lineHeight: 1.2 }}>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#f3f4f6' }}>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#f8fafc' }}>
                     {currentUser.username || currentUser.first_name || 'Authenticated User'}
                   </div>
-                  <div style={{ fontSize: '0.6875rem', color: '#3b82f6', fontWeight: 700 }}>
-                    {currentUser.role || 'USER'}
+                  <div style={{ fontSize: '0.6875rem', color: '#60a5fa', fontWeight: 700, letterSpacing: '0.04em' }}>
+                    {currentUser.role || 'CITIZEN'}
                   </div>
                 </div>
               </div>
